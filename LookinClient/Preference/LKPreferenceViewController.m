@@ -19,7 +19,12 @@
 @property(nonatomic, strong) LKPreferencePopupView *view_appearance;
 @property(nonatomic, strong) LKPreferencePopupView *view_colorFormat;
 @property(nonatomic, strong) LKPreferenceSwitchView *view_enableLog;
+@property(nonatomic, strong) LKPreferenceSwitchView *view_enableMCPServer;
 @property(nonatomic, strong) LKPreferencePopupView *view_contrast;
+
+@property(nonatomic, strong) NSView *mcpAddressContainer;
+@property(nonatomic, strong) NSTextField *mcpAddressLabel;
+@property(nonatomic, strong) NSButton *mcpCopyButton;
 
 //@property(nonatomic, strong) NSButton *debugButton;
 @property(nonatomic, strong) NSButton *resetButton;
@@ -70,7 +75,32 @@
         [LKPreferenceManager mainManager].enableReport = isChecked;
     };
     [self.view addSubview:self.view_enableLog];
-    
+
+    self.view_enableMCPServer = [[LKPreferenceSwitchView alloc] initWithTitle:NSLocalizedString(@"Enable MCP Server", nil) message:NSLocalizedString(@"Allow external AI tools to query view hierarchy via HTTP API on port 47199.", nil)];
+    self.view_enableMCPServer.didChange = ^(BOOL isChecked) {
+        [LKPreferenceManager mainManager].enableMCPServer = isChecked;
+    };
+    [self.view addSubview:self.view_enableMCPServer];
+
+    // MCP 地址容器
+    self.mcpAddressContainer = [[NSView alloc] init];
+    [self.view addSubview:self.mcpAddressContainer];
+
+    // MCP 地址标签
+    self.mcpAddressLabel = [[NSTextField alloc] init];
+    self.mcpAddressLabel.stringValue = @"claude mcp add --transport http lookin http://127.0.0.1:47199/mcp";
+    self.mcpAddressLabel.editable = NO;
+    self.mcpAddressLabel.selectable = YES;
+    self.mcpAddressLabel.bordered = NO;
+    self.mcpAddressLabel.backgroundColor = [NSColor clearColor];
+    self.mcpAddressLabel.font = [NSFont fontWithName:@"Menlo" size:11];
+    self.mcpAddressLabel.textColor = [NSColor secondaryLabelColor];
+    [self.mcpAddressContainer addSubview:self.mcpAddressLabel];
+
+    // 拷贝按钮
+    self.mcpCopyButton = [NSButton lk_normalButtonWithTitle:NSLocalizedString(@"Copy", nil) target:self action:@selector(_handleCopyMCPCommand)];
+    [self.mcpAddressContainer addSubview:self.mcpCopyButton];
+
 //    self.debugButton = [NSButton lk_normalButtonWithTitle:@"Debug" target:self action:@selector(_handleDebugButton)];
 //    [self.view addSubview:self.debugButton];
     
@@ -94,6 +124,7 @@
     self.view_appearance.selectedIndex = manager.appearanceType;
     self.view_doubleClick.selectedIndex = manager.doubleClickBehavior;
     self.view_enableLog.isChecked = manager.enableReport;
+    self.view_enableMCPServer.isChecked = manager.enableMCPServer;
 }
 
 - (void)viewDidLayout {
@@ -113,8 +144,21 @@
         $(view).x(115).toRight(insets.right).y(y).heightToFit;
         y = view.$maxY + 5;
     }];
-    
-    $(self.resetButton).width(120).bottom(insets.bottom).right(insets.right);
+
+    y += 10;
+    [$(self.view_enableMCPServer).array enumerateObjectsUsingBlock:^(NSView *  _Nonnull view, NSUInteger idx, BOOL * _Nonnull stop) {
+        $(view).x(115).toRight(insets.right).y(y).heightToFit;
+        y = view.$maxY + 5;
+    }];
+
+    // MCP 地址容器布局
+    $(self.mcpAddressContainer).x(115).toRight(insets.right).y(y).height(50);
+    $(self.mcpAddressLabel).x(0).y(-10).height(50).toRight(90);
+    $(self.mcpCopyButton).width(70).height(24).right(0).y(13);
+    y = self.mcpAddressContainer.$maxY + 5;
+
+    y += 15;
+    $(self.resetButton).width(120).y(y).right(insets.right);
 //    $(self.debugButton).bottom(insets.bottom).maxX(self.resetButton.$x - 15);
 }
 
@@ -122,6 +166,7 @@
     LKPreferenceManager *manager = [LKPreferenceManager mainManager];
     manager.appearanceType = LookinPreferredAppeanranceTypeSystem;
     manager.enableReport = YES;
+    manager.enableMCPServer = YES;
     manager.rgbaFormat = YES;
     manager.doubleClickBehavior = LookinDoubleClickBehaviorCollapse;
     manager.imageContrastLevel = 0;
@@ -132,6 +177,19 @@
     [[LKPreferenceManager mainManager] reset];
     [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"IgnoreFastModeTips"];
 #endif
+}
+
+- (void)_handleCopyMCPCommand {
+    NSString *command = @"claude mcp add --transport http lookin http://127.0.0.1:47199/mcp";
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard clearContents];
+    [pasteboard setString:command forType:NSPasteboardTypeString];
+
+    // 显示复制成功的提示
+    self.mcpCopyButton.title = NSLocalizedString(@"Copied!", nil);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        self.mcpCopyButton.title = NSLocalizedString(@"Copy", nil);
+    });
 }
 
 - (void)_handleDebugButton {

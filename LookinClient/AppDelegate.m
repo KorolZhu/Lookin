@@ -16,6 +16,7 @@
 #import "NSString+Score.h"
 #import "LookinDashboardBlueprint.h"
 #import "LKPreferenceManager.h"
+#import "Lookin-Swift.h"
 @import AppCenter;
 @import AppCenterAnalytics;
 @import AppCenterCrashes;
@@ -52,7 +53,12 @@
     if (!self.launchedToOpenFile) {
         [[LKNavigationManager sharedInstance] showLaunch];
     }
-    
+
+    // Start MCP HTTP Server for external tool integration (if enabled)
+    if ([LKPreferenceManager mainManager].enableMCPServer) {
+        [[MCPServerManager shared] start];
+    }
+
     [self resolveAppCenterKey];
     
     NSString *key = [self resolveAppCenterKey];
