@@ -159,11 +159,12 @@ extern NSString *const LKAppShowConsoleNotificationName;
         }];
         
         [self.dataSource.preferenceManager.previewScale subscribe:self action:@selector(_handleManagerPreviewScaleDidChange:) relatedObject:nil sendAtOnce:YES];
+        [self.dataSource.preferenceManager.previewTranslation subscribe:self action:@selector(_handleManagerPreviewTranslationDidChange:) relatedObject:nil sendAtOnce:YES];
         [self.dataSource.preferenceManager.previewDimension subscribe:self action:@selector(_handleManagerPreviewDimensionDidChange:) relatedObject:nil sendAtOnce:YES];
         [self.dataSource.preferenceManager.freeRotation subscribe:self action:@selector(_handleManagerFreeRotationDidChange:) relatedObject:nil sendAtOnce:YES];
         [self.dataSource.preferenceManager.zInterspace subscribe:self action:@selector(_handleManagerZInterspaceDidChange:) relatedObject:nil sendAtOnce:YES];
         
-        // 用于在 reload app 时重置 translation 和 scale
+        // 用于在 reload app 时同步预览尺寸信息
         [[RACObserve(dataSource, rawHierarchyInfo) skip:1] subscribeNext:^(id  _Nullable x) {
             @strongify(self);
             [self _hierarchyInfoDidChange];
@@ -306,6 +307,10 @@ extern NSString *const LKAppShowConsoleNotificationName;
     self.previewView.scale = scale;
 }
 
+- (void)_handleManagerPreviewTranslationDidChange:(LookinMsgActionParams *)params {
+    self.previewView.translation = [(NSValue *)params.value pointValue];
+}
+
 - (void)_handleManagerPreviewDimensionDidChange:(LookinMsgActionParams *)params {
     LookinPreviewDimension newDimension = params.integerValue;
     
@@ -388,7 +393,7 @@ extern NSString *const LKAppShowConsoleNotificationName;
             CGFloat currentScale = self.previewView.scale;
             CGFloat factor = (1 - currentScale) * 0.92 + 0.08;
             NSPoint newTranslation = NSMakePoint(initialTranslation.x + translation.x * 0.01 * factor, initialTranslation.y - translation.y * 0.01 * factor);
-            self.previewView.translation = newTranslation;
+            [self.dataSource.preferenceManager.previewTranslation setValue:[NSValue valueWithPoint:newTranslation] ignoreSubscriber:nil userInfo:nil];
         }
     }
 }
@@ -513,7 +518,7 @@ extern NSString *const LKAppShowConsoleNotificationName;
         CGPoint translation = self.previewView.translation;
         translation.x += event.deltaX * 0.04 * factor;
         translation.y -= event.deltaY * 0.04 * factor;
-        self.previewView.translation = translation;
+        [self.dataSource.preferenceManager.previewTranslation setValue:[NSValue valueWithPoint:translation] ignoreSubscriber:nil userInfo:nil];
         
         if (self.staticViewController && !TutorialMng.hasAlreadyShowedTipsThisLaunch && !TutorialMng.moveWithSpace) {
             TutorialMng.moveWithSpace = YES;
@@ -601,25 +606,7 @@ extern NSString *const LKAppShowConsoleNotificationName;
         NSAssert(NO, @"");
         return;
     }
-    
     self.previewView.appScreenSize = CGSizeMake(currentInfo.appInfo.screenWidth, currentInfo.appInfo.screenHeight);
-    
-    LookinHierarchyInfo *prevInfo = [self lookin_getBindObjectForKey:@"prevRawHierarchyInfo"];
-    [self lookin_bindObject:currentInfo forKey:@"prevRawHierarchyInfo"];
-    if (!prevInfo) {
-        return;
-    }
-    CGFloat prevWidth = prevInfo.appInfo.screenWidth;
-    CGFloat prevHeight = prevInfo.appInfo.screenHeight;
-    CGFloat currentWidth = currentInfo.appInfo.screenWidth;
-    CGFloat currentHeight = currentInfo.appInfo.screenHeight;
-    
-    if (prevWidth == currentWidth && prevHeight == currentHeight) {
-        // 内容尺寸没有变化
-        return;
-    }
-    /// iOS App 尺寸变化，重置 Scale
-    [self.dataSource.preferenceManager.previewScale setDoubleValue:LKInitialPreviewScale ignoreSubscriber:nil];
 }
 
 #pragma mark - <NSMenuDelegate>

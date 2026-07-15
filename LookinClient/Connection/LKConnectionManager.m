@@ -14,6 +14,7 @@
 #import "LookinAppInfo.h"
 #import "LKConnectionRequest.h"
 #import "LKServerVersionRequestor.h"
+#import <AppKit/AppKit.h>
 
 static NSIndexSet * PushFrameTypeList() {
     static NSIndexSet *list;
@@ -23,6 +24,62 @@ static NSIndexSet * PushFrameTypeList() {
         list = set.copy;
     });
     return list;
+}
+
+static void LKAddAllowedCodingClass(NSMutableSet<Class> *classes, NSString *className) {
+    Class cls = NSClassFromString(className);
+    if (cls) {
+        [classes addObject:cls];
+    }
+}
+
+static NSSet<Class> * LKAllowedConnectionCodingClasses() {
+    static NSSet<Class> *classes;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSMutableSet<Class> *mutableClasses = [NSMutableSet setWithObjects:
+                                               NSArray.class,
+                                               NSDictionary.class,
+                                               NSSet.class,
+                                               NSString.class,
+                                               NSNumber.class,
+                                               NSData.class,
+                                               NSDate.class,
+                                               NSError.class,
+                                               NSNull.class,
+                                               NSValue.class,
+                                               NSColor.class,
+                                               NSImage.class,
+                                               nil];
+        NSArray<NSString *> *lookinClassNames = @[
+            @"LookinAppInfo",
+            @"LookinAttribute",
+            @"LookinAttributeModification",
+            @"LookinAttributesGroup",
+            @"LookinAttributesSection",
+            @"LookinAutoLayoutConstraint",
+            @"LookinConnectionAttachment",
+            @"LookinConnectionResponseAttachment",
+            @"LookinCustomAttrModification",
+            @"LookinCustomDisplayItemInfo",
+            @"LookinDisplayItem",
+            @"LookinDisplayItemDetail",
+            @"LookinEventHandler",
+            @"LookinHierarchyFile",
+            @"LookinHierarchyInfo",
+            @"LookinIvarTrace",
+            @"LookinObject",
+            @"LookinStaticAsyncUpdateTask",
+            @"LookinStaticAsyncUpdateTasksPackage",
+            @"LookinStringTwoTuple",
+            @"LookinTwoTuple",
+        ];
+        [lookinClassNames enumerateObjectsUsingBlock:^(NSString * _Nonnull className, NSUInteger idx, BOOL * _Nonnull stop) {
+            LKAddAllowedCodingClass(mutableClasses, className);
+        }];
+        classes = mutableClasses.copy;
+    });
+    return classes;
 }
 
 @interface Lookin_PTChannel (LKConnection)
@@ -444,7 +501,7 @@ static NSIndexSet * PushFrameTypeList() {
     if ([PushFrameTypeList() containsIndex:type]) {
         NSData *data = [NSData dataWithContentsOfDispatchData:payload.dispatchData];
         NSError *unarchiveError = nil;
-        NSObject *unarchivedData = [NSKeyedUnarchiver unarchivedObjectOfClass:[NSObject class] fromData:data error:&unarchiveError];
+        NSObject *unarchivedData = [NSKeyedUnarchiver unarchivedObjectOfClasses:LKAllowedConnectionCodingClasses() fromData:data error:&unarchiveError];
         if (unarchiveError) {
             //        NSAssert(NO, @"");
         }
@@ -465,7 +522,7 @@ static NSIndexSet * PushFrameTypeList() {
 
     NSData *data = [NSData dataWithContentsOfDispatchData:payload.dispatchData];
     NSError *unarchiveError = nil;
-    LookinConnectionResponseAttachment *attachment = [NSKeyedUnarchiver unarchivedObjectOfClass:[NSObject class] fromData:data error:&unarchiveError];
+    LookinConnectionResponseAttachment *attachment = (LookinConnectionResponseAttachment *)[NSKeyedUnarchiver unarchivedObjectOfClasses:LKAllowedConnectionCodingClasses() fromData:data error:&unarchiveError];
     if (unarchiveError) {
         NSLog(@"Error:%@", unarchiveError);
 //        NSAssert(NO, @"");

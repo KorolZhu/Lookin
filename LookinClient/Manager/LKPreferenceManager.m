@@ -18,13 +18,15 @@ NSString *const NotificationName_DidChangeSectionShowing = @"NotificationName_Di
 NSString *const LKWindowSizeName_Dynamic = @"LKWindowSizeName_Dynamic";
 NSString *const LKWindowSizeName_Static = @"LKWindowSizeName_Static";
 
-const CGFloat LKInitialPreviewScale = 0.27;
+const CGFloat LKInitialPreviewScale = 0.20;
 
 static NSString * const Key_PreviousClientVersion = @"preVer";
 static NSString * const Key_ShowOutline = @"showOutline";
 static NSString * const Key_ShowHiddenItems = @"showHiddenItems";
 static NSString * const Key_EnableReport = @"enableReport";
 static NSString * const Key_RgbaFormat = @"egbaFormat";
+static NSString * const Key_PreviewScale = @"previewScale";
+static NSString * const Key_PreviewTranslation = @"previewTranslation";
 static NSString * const Key_ZInterspace = @"zInterspace_v095";
 static NSString * const Key_AppearanceType = @"appearanceType";
 static NSString * const Key_DoubleClickBehavior = @"doubleClickBehavior";
@@ -61,7 +63,6 @@ static NSString * const Key_ReceivingConfigTime_Class = @"ConfigTime_Class";
 
 - (instancetype)init {
     if (self = [super init]) {
-        _previewScale = [LookinDoubleMsgAttribute attributeWithDouble:LKInitialPreviewScale];
         _previewDimension = [LookinIntegerMsgAttribute attributeWithInteger:LookinPreviewDimension3D];
         _measureState = [LookinIntegerMsgAttribute attributeWithInteger:LookinMeasureState_no];
         _isQuickSelecting = [LookinBOOLMsgAttribute attributeWithBOOL:NO];
@@ -118,6 +119,28 @@ static NSString * const Key_ReceivingConfigTime_Class = @"ConfigTime_Class";
             [userDefaults setObject:@(_rgbaFormat) forKey:Key_RgbaFormat];
         }
         
+        double previewScaleValue;
+        NSNumber *obj_previewScale = [userDefaults objectForKey:Key_PreviewScale];
+        if (obj_previewScale != nil) {
+            previewScaleValue = [obj_previewScale doubleValue];
+        } else {
+            previewScaleValue = LKInitialPreviewScale;
+            [userDefaults setObject:@(previewScaleValue) forKey:Key_PreviewScale];
+        }
+        previewScaleValue = MAX(MIN(previewScaleValue, LookinPreviewMaxScale), LookinPreviewMinScale);
+        _previewScale = [LookinDoubleMsgAttribute attributeWithDouble:previewScaleValue];
+        [self.previewScale subscribe:self action:@selector(_handlePreviewScaleDidChange:) relatedObject:nil];
+
+        NSPoint previewTranslation = NSZeroPoint;
+        NSArray<NSNumber *> *obj_previewTranslation = [userDefaults objectForKey:Key_PreviewTranslation];
+        if ([obj_previewTranslation isKindOfClass:NSArray.class] && obj_previewTranslation.count == 2) {
+            previewTranslation = NSMakePoint(obj_previewTranslation[0].doubleValue, obj_previewTranslation[1].doubleValue);
+        } else {
+            [userDefaults setObject:@[@(previewTranslation.x), @(previewTranslation.y)] forKey:Key_PreviewTranslation];
+        }
+        _previewTranslation = [LookinMsgAttribute attributeWithValue:[NSValue valueWithPoint:previewTranslation]];
+        [self.previewTranslation subscribe:self action:@selector(_handlePreviewTranslationDidChange:) relatedObject:nil];
+
         double zInterspaceValue;
         NSNumber *obj_zInterspace = [userDefaults objectForKey:Key_ZInterspace];
         if (obj_zInterspace != nil) {
@@ -365,6 +388,22 @@ static NSString * const Key_ReceivingConfigTime_Class = @"ConfigTime_Class";
     }
     double doubleValue = param.doubleValue;
     [[NSUserDefaults standardUserDefaults] setObject:@(doubleValue) forKey:Key_ZInterspace];
+}
+
+- (void)_handlePreviewScaleDidChange:(LookinMsgActionParams *)param {
+    if (!self.shouldStoreToLocal) {
+        return;
+    }
+    double doubleValue = MAX(MIN(param.doubleValue, LookinPreviewMaxScale), LookinPreviewMinScale);
+    [[NSUserDefaults standardUserDefaults] setObject:@(doubleValue) forKey:Key_PreviewScale];
+}
+
+- (void)_handlePreviewTranslationDidChange:(LookinMsgActionParams *)param {
+    if (!self.shouldStoreToLocal) {
+        return;
+    }
+    NSPoint pointValue = [(NSValue *)param.value pointValue];
+    [[NSUserDefaults standardUserDefaults] setObject:@[@(pointValue.x), @(pointValue.y)] forKey:Key_PreviewTranslation];
 }
 
 /// 返回某个 section 是否应该被显示在主界面上

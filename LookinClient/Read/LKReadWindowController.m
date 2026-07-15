@@ -32,14 +32,15 @@
 @implementation LKReadWindowController
 
 - (instancetype)initWithFile:(LookinHierarchyFile *)file {
-    NSSize screenSize = [NSScreen mainScreen].frame.size;
-    LKWindow *window = [[LKWindow alloc] initWithContentRect:NSMakeRect(0, 0, screenSize.width * .7, screenSize.height * .7) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable|NSWindowStyleMaskFullSizeContentView backing:NSBackingStoreBuffered defer:YES];
+    NSScreen *screen = [LKWindow lookin_preferredInitialScreen];
+    NSSize screenSize = screen.visibleFrame.size;
+    LKWindow *window = [[LKWindow alloc] initWithContentRect:[LKWindow lookin_centeredRectWithSize:NSMakeSize(screenSize.width * .7, screenSize.height * .7) onScreen:screen] styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable|NSWindowStyleMaskFullSizeContentView backing:NSBackingStoreBuffered defer:YES];
+    window.lookin_tracksPreferredScreen = YES;
     window.tabbingMode = NSWindowTabbingModeDisallowed;
     if (@available(macOS 11.0, *)) {
         window.toolbarStyle = NSWindowToolbarStyleUnified;
     }
     window.minSize = NSMakeSize(800, 500);
-    [window center];
     
     if (self = [self initWithWindow:window]) {
         self.preferenceManager = [LKPreferenceManager new];

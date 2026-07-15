@@ -62,8 +62,13 @@
         return LookinColorMake(191, 191, 191);
     }
     
+    NSColor *rgbColor = [color colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+    if (!rgbColor) {
+        return LookinColorMake(191, 191, 191);
+    }
+
     CGFloat hue, saturation, brightness, alpha;
-    [color getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha];
+    [rgbColor getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha];
     
     CGFloat newBrightness = (brightness > .5) ? (brightness - .2) : (brightness + .2);
     CGFloat newAlpha = MIN(1, alpha + .3);

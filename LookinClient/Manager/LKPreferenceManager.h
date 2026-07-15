@@ -84,6 +84,9 @@ typedef NS_ENUM(NSInteger, LookinMeasureState) {
 
 @property(nonatomic, strong, readonly) LookinBOOLMsgAttribute *fastMode;
 
+@property(nonatomic, strong, readonly) LookinDoubleMsgAttribute *previewScale;
+@property(nonatomic, strong, readonly) LookinMsgAttribute *previewTranslation;
+
 /// 上次接收到 iOS app 里传过来的 color config 和 collapsedClasses 信息的时间，用来统计
 @property(nonatomic, assign) NSTimeInterval receivingConfigTime_Color;
 @property(nonatomic, assign) NSTimeInterval receivingConfigTime_Class;
@@ -102,8 +105,6 @@ extern NSString *const NotificationName_DidChangeSectionShowing;
 @property(nonatomic, assign) LookinPreferredCallStackType callStackType;
 
 @property(nonatomic, strong, readonly) LookinIntegerMsgAttribute *previewDimension;
-
-@property(nonatomic, strong, readonly) LookinDoubleMsgAttribute *previewScale;
 
 /// 参数是 LookinMeasureState
 @property(nonatomic, strong, readonly) LookinIntegerMsgAttribute *measureState;
